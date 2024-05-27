@@ -38,6 +38,8 @@ def transform(node: NodeNG) -> None:
     does not raise an error, so you think your code (and ours) works, but it's not :-(
     So we need to write tests that fails to make sure our plugin works.
     """
+    params = dict(col_offset=0, parent=node, end_lineno=None, end_col_offset=None)
+
     if node.name == "SQLAlchemy":
         import sqlalchemy
         import sqlalchemy.orm
@@ -45,10 +47,10 @@ def transform(node: NodeNG) -> None:
         for module in sqlalchemy, sqlalchemy.orm:
             for key in sorted(module.__all__, key=sort_module_keys):
                 if key not in FLASK_SQLALCHEMY_WRAPS:
-                    node.locals[key] = [ClassDef(key, None)]
+                    node.locals[key] = [ClassDef(key, None, **params)]
                 else:
                     node.locals[key] = [
-                        ClassDef(key, None),
+                        ClassDef(key, None, **params),
                         node.locals["Query"]
                     ]
     elif node.name == "scoped_session":
@@ -57,9 +59,9 @@ def transform(node: NodeNG) -> None:
         for key in sorted(dir(Session), reverse=True):
             # `query` is in fact a proxy to `query_property`
             if key == "query":
-                node.locals[key] = [ClassDef(key, None), node.locals["query_property"]]
+                node.locals[key] = [ClassDef(key, None, **params), node.locals["query_property"]]
             else:
-                node.locals[key] = [ClassDef(key, None)]
+                node.locals[key] = [ClassDef(key, None, **params)]
 
 
 MANAGER.register_transform(ClassDef, transform)
